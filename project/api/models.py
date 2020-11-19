@@ -43,6 +43,10 @@ class SurveyModel(models.Model):
     def questions(self):
         return self.related_question.all()
 
+    @classmethod
+    def get_list_names_active_surveys(self):
+        return [survey.name for survey in self.objects.all()]
+
 
 class QuestionModel(models.Model):
     survey = models.ForeignKey(SurveyModel, on_delete=models.CASCADE,

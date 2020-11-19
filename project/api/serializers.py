@@ -9,20 +9,15 @@ from .models import SurveyModel, QuestionModel, ChoiceOptionModel
 class ChoiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChoiceOptionModel
-        fields = ('choice_text', )
+        fields = ('id', 'choice_text', )
 
 
 class QuestionSerializer(serializers.ModelSerializer):
-    #choices = serializers.SerializerMethodField('get_choices')
-    choices = ChoiceSerializer(many=True)
+    choices = ChoiceSerializer(many=True, required=False)
 
     class Meta:
         model = QuestionModel
-        fields = ('text', 'choices', )
-
-    def get_choices(self, instance):
-        serializer = ChoiceSerializer(instance.choices, many=True)
-        return serializer.data
+        fields = ('id', 'text', 'choices', )
 
     def create(self, validated_data):
         choices = validated_data.pop('choices', None)
@@ -36,12 +31,25 @@ class QuestionSerializer(serializers.ModelSerializer):
 
             choices_serializer.save(question_id=question_instance.id)
 
-        return QuestionSerializer(question_instance).data
+        return question_instance
+
+    def update(self, instance, validated_data):
+        choices = validated_data.pop('choices', None)
+        choices_list = list(instance.choices)
+
+        instance.text = validated_data.get('text', instance.text)
+        instance.save()
+
+        for choice_data in choices:
+            choice = choices_list.pop(0)
+            choice.choice_text = choice_data.get('choice_text', choice.choice_text)
+            choice.save()
+
+        return instance
 
 
 class SurveySerializer(serializers.ModelSerializer):
-    #questions = serializers.SerializerMethodField('get_questions')
-    questions = QuestionSerializer(many=True)
+    questions = QuestionSerializer(many=True, required=False)
 
     datetime_start = serializers.DateTimeField(required=False)
     datetime_end = serializers.DateTimeField()
@@ -50,10 +58,6 @@ class SurveySerializer(serializers.ModelSerializer):
         model = SurveyModel
         fields = ('id', 'name', 'description', 'datetime_start', 'datetime_end',
                   'questions', )
-
-    def get_questions(self, instance):
-        serializer = QuestionSerializer(instance.questions, many=True)
-        return serializer.data
 
     def create(self, validated_data):
         questions = validated_data.pop('questions', None)
@@ -67,7 +71,7 @@ class SurveySerializer(serializers.ModelSerializer):
 
             questions_serializer.save(survey_id=survey_instance.id)
 
-        return SurveySerializer(survey_instance).data
+        return survey_instance
 
 
 class SurveySerializerWithoutStartDate(serializers.ModelSerializer):
