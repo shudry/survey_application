@@ -1,11 +1,13 @@
-##### Create and activate virtualenv. Install requirement packages.
+## Установка и настройка
+
+Создание и активация виртуальной среды. Установка всех необходимых пакетов.
 ```python
 virtualenv .virtual
 source .virtual/bin/activate
 pip install -r requirements.txt
 ```
 
-##### Run django
+Запуск django
 ```python
 python manage.py migrate
 python manage.py createsuperuser
@@ -13,13 +15,13 @@ python manage.py runserver
 ```
 
 
-## API usage
+## API
 
-### Step 1. Authorization.
+### Аутентификация и дальнейшая авторизация.
 ```bash
 post http://127.0.0.1:8000/auth/token/ '{username:test_username, password:test_password}'
 ```
-Result code
+В ответ на запрос, ожидается два токена. Для дальнейшей авторизации будет указыватся токен из `access`
 
 ```json
 {
@@ -29,8 +31,9 @@ Result code
 ```
 
 
-### Step 2. Administrator API.
-##### Survey create with 2 question.
+### API администратора `/api/administrator/`.
+Создание опроса с двумя вопросами и несколькими вариантами выбора.
+
 ```bash
 # Send data to server with http header
 post http://127.0.0.1:8000/api/administrator/surveys/ "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2MDU4OTkxOTgsImp0aSI6IjMyNmM5YzUxMTk2ZjQ4NGU4OTYwZTFhYmMxOTgwMDk0IiwidG9rZW5fdHlwZSI6ImFjY2VzcyIsInVzZXJfaWQiOjF9.t5b2kqUVprbizNQrowMD50b1s0bVk98qfwvlzDBEjag"
@@ -69,8 +72,27 @@ post http://127.0.0.1:8000/api/administrator/surveys/ "Authorization: Bearer eyJ
 }
 ```
 
+### Ответ на вопрос.
+Ответ на вопрос. Все данные сохраняются за идентификатором. Если пользователь вошел в систему, идентификатор указывать не нужно. Для наглядности, можно создать несколько ответов под разными идентификаторами и после чего просматривать ответы в зависимости от выбраного идентификатора `get http://127.0.0.1:8000/api/answers/?identifier=12345`
 
-## Simple API info.
+**selected_choices** - список **id** модели **ChoiceOptionModel**. Те варианты, которые выбрал пользователь.
+```bash
+# Send data to server
+post http://127.0.0.1:8000/api/answers/?identifier=12345
+```
+```json
+# POST data
+{
+    "question": 4,
+    "text": "Какой-то расширенный ответ на вопрос!",
+    "selected_choices": [
+        3,
+        5
+    ]
+}
+```
+
+### Информация по API.
 
 ```bash
 # Get all surveys
@@ -100,7 +122,38 @@ get http://127.0.0.1:8000/api/administrator/questions/<id>/ "Authorization: Bear
 delete http://127.0.0.1:8000/api/administrator/questions/<id>/ "Authorization: Bearer ..."
 ```
 
+API для пользователей
+
 ```bash
 # Get all surveys for users
 get http://127.0.0.1:8000/api/list-active-surveys/
+```
+
+```bash
+# Get all answers for users by identifier
+get http://127.0.0.1:8000/api/answers/?identifier=12345
+```
+
+```bash
+# Get all answered surveys by identifier
+get http://127.0.0.1:8000/api/answered-surveys/?identifier=12345
+```
+```json
+1: {
+    "name": "Опрос, какие фрукты любят пользователи.",
+    "description": "Детальная информация по опросу",
+    "info": "Start survey 19 November 2020 (22:16). End 19 November 2020 (22:16)",
+    "questions": [
+        {
+            "text": "Первый вопрос. Какаие из этих фруктов вам больше нравятся?"
+            "choices": [
+                "Яблоки",
+                "Персики"
+            ]
+        }, {
+            "text": "Второй вопрос. Почему они Вам нравятся?",
+            "answer_text": "Потому что они вкусные!",
+        }
+    ]
+}
 ```

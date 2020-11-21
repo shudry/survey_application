@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 from django.template.defaultfilters import date as _date
 
 # Create your models here.
@@ -63,3 +64,21 @@ class ChoiceOptionModel(models.Model):
                                  related_name='related_choice')
 
     choice_text = models.CharField(max_length=300)
+
+
+class AnonymousUserModel(models.Model):
+    identifier = models.CharField(max_length=40)
+    user = models.ForeignKey(User, blank=True, null=True,
+                             on_delete=models.SET_NULL,
+                             related_name='related_identifier_user_instance')
+
+
+class AnswerModel(models.Model):
+    anonymous_user = models.ForeignKey(AnonymousUserModel,
+                                       on_delete=models.CASCADE,
+                                       related_name='related_anonymous_user')
+    question = models.ForeignKey(QuestionModel, on_delete=models.CASCADE,
+                                 related_name='related_answer_on_question')
+
+    text = models.TextField()
+    selected_choices = models.ManyToManyField(ChoiceOptionModel)

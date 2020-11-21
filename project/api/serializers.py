@@ -1,9 +1,14 @@
 import json
 
 from django.conf import settings
+
 from rest_framework import serializers
 
-from .models import SurveyModel, QuestionModel, ChoiceOptionModel
+from .models import (
+        SurveyModel, QuestionModel, ChoiceOptionModel, AnswerModel,
+        AnonymousUserModel
+    )
+from .tools import get_anonymous_identify_model_id
 
 
 class ChoiceSerializer(serializers.ModelSerializer):
@@ -42,7 +47,8 @@ class QuestionSerializer(serializers.ModelSerializer):
 
         for choice_data in choices:
             choice = choices_list.pop(0)
-            choice.choice_text = choice_data.get('choice_text', choice.choice_text)
+            choice.choice_text = choice_data.get('choice_text',
+                                                 choice.choice_text)
             choice.save()
 
         return instance
@@ -80,3 +86,32 @@ class SurveySerializerWithoutStartDate(serializers.ModelSerializer):
     class Meta:
         model = SurveyModel
         fields = ('id', 'name', 'description', 'datetime_end')
+
+
+class AnswerSerializer(serializers.ModelSerializer):
+    question = serializers.PrimaryKeyRelatedField(
+                    queryset=QuestionModel.objects.all())
+    text = serializers.CharField(required=False)
+    selected_choices = serializers.PrimaryKeyRelatedField(
+                            many=True, queryset=ChoiceOptionModel.objects.all())
+
+    class Meta:
+        model = AnswerModel
+        fields = ('id', 'question', 'text', 'selected_choices')
+
+    def create(self, validated_data):
+        selected_choices = validated_data.pop('selected_choices', None)
+
+        validated_data['anonymous_user_id'] = get_anonymous_identify_model_id(
+                                                    self.context['request'])
+        created_answer = self.Meta.model.objects.create(**validated_data)
+
+        created_answer.selected_choices.add(*selected_choices)
+        created_answer.save()
+
+        return created_answer
+
+    def update(self, instance, validated_data):
+        validated_data['anonymous_user_id'] = get_anonymous_identify_model_id(
+                                                    self.context['request'])
+        return super(AnswerSerializer, self).update(instance, validated_data)
